@@ -80,7 +80,6 @@ pub fn save_session(app: &AppHandle, data: &SessionData) -> Result<(), String> {
     Ok(())
 }
 
-#[allow(dead_code)]
 pub fn load_session(app: &AppHandle) -> Result<Option<SessionData>, String> {
     let store = app
         .store(SESSION_STORE_PATH)

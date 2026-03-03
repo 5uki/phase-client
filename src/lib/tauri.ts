@@ -49,6 +49,13 @@ export interface TotpEntry {
   period: number;
 }
 
+export interface RestoreResult {
+  serverUrl: string;
+  connectionMode: string;
+  instanceToken: string | null;
+  vaultVersion: number;
+}
+
 export type UnlistenFn = () => void;
 
 // ── Command wrappers ───────────────────────────────────────────────────────
@@ -174,3 +181,6 @@ export const cmdReencryptVault = (
     vaultJson,
     version,
   });
+
+export const cmdRestoreSession = (): Promise<RestoreResult | null> =>
+  invoke<RestoreResult | null>("cmd_restore_session", {});

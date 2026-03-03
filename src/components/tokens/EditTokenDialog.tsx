@@ -19,6 +19,8 @@ import {
   Person24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../store/appStore";
+import { cmdPutVault } from "../../lib/tauri";
+import { buildVaultJson } from "../../lib/vault";
 import type { Token } from "../../types";
 
 const useStyles = makeStyles({
@@ -46,10 +48,11 @@ interface EditTokenDialogProps {
 
 export function EditTokenDialog({ token, open, onClose }: EditTokenDialogProps) {
   const styles = useStyles();
-  const { updateToken, deleteToken, groups } = useAppStore();
+  const { updateToken, deleteToken, groups, tokens, sessionHandle, jwt, serverUrl, instanceToken, vaultVersion, setVaultData } = useAppStore();
   const [issuer, setIssuer] = useState("");
   const [account, setAccount] = useState("");
   const [group, setGroup] = useState("Personal");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -59,19 +62,54 @@ export function EditTokenDialog({ token, open, onClose }: EditTokenDialogProps) 
     }
   }, [token]);
 
-  const handleSave = () => {
+  const availableGroups = Array.from(new Set([
+    "Personal", "Work",
+    ...groups.filter(g => g !== "All"),
+  ]));
+
+  const handleSave = async () => {
     if (!token) return;
     updateToken(token.id, {
       issuer: issuer.trim(),
       account: account.trim(),
       group,
     });
+
+    if (sessionHandle && jwt) {
+      setBusy(true);
+      try {
+        const updatedTokens = tokens.map(t =>
+          t.id === token.id ? { ...t, issuer: issuer.trim(), account: account.trim(), group, updatedAt: Date.now() } : t
+        );
+        const vaultJson = buildVaultJson(updatedTokens, vaultVersion + 1);
+        const newVersion = await cmdPutVault(sessionHandle, serverUrl, jwt, instanceToken, vaultJson, vaultVersion);
+        setVaultData(updatedTokens, newVersion);
+      } catch (e) {
+        console.error("Failed to sync vault:", e);
+      } finally {
+        setBusy(false);
+      }
+    }
     onClose();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!token) return;
     deleteToken(token.id);
+
+    if (sessionHandle && jwt) {
+      setBusy(true);
+      try {
+        const updatedTokens = tokens.filter(t => t.id !== token.id);
+        const vaultJson = buildVaultJson(updatedTokens, vaultVersion + 1);
+        const newVersion = await cmdPutVault(sessionHandle, serverUrl, jwt, instanceToken, vaultJson, vaultVersion);
+        setVaultData(updatedTokens, newVersion);
+      } catch (e) {
+        console.error("Failed to sync vault:", e);
+      } finally {
+        setBusy(false);
+      }
+    }
     onClose();
   };
 
@@ -108,19 +146,18 @@ export function EditTokenDialog({ token, open, onClose }: EditTokenDialogProps) 
                     data.optionValue && setGroup(data.optionValue)
                   }
                 >
-                  {groups
-                    .filter((g) => g !== "All")
-                    .map((g) => (
-                      <Option key={g} value={g}>
-                        {g}
-                      </Option>
-                    ))}
+                  {availableGroups.map((g) => (
+                    <Option key={g} value={g}>
+                      {g}
+                    </Option>
+                  ))}
                 </Dropdown>
               </div>
               <div className={styles.dangerZone}>
                 <Button
                   appearance="secondary"
                   onClick={handleDelete}
+                  disabled={busy}
                   style={{ color: "var(--colorPaletteRedForeground1)" }}
                 >
                   Delete token
@@ -135,9 +172,9 @@ export function EditTokenDialog({ token, open, onClose }: EditTokenDialogProps) 
             <Button
               appearance="primary"
               onClick={handleSave}
-              disabled={!issuer.trim() || !account.trim()}
+              disabled={!issuer.trim() || !account.trim() || busy}
             >
-              Save
+              {busy ? "Saving..." : "Save"}
             </Button>
           </DialogActions>
         </DialogBody>

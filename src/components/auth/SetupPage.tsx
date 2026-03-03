@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Card,
   Input,
@@ -32,6 +32,7 @@ import {
   cmdHealth,
   cmdShSetup,
   cmdShOpen,
+  type RestoreResult,
 } from "../../lib/tauri";
 import type { Token } from "../../types";
 
@@ -42,6 +43,7 @@ type SetupView =
   | "selfhosted-url"     // Step 1: URL + Instance Token
   | "selfhosted-init"    // Step 2a: first-time, set master password
   | "selfhosted-login"   // Step 2b: existing vault, enter master password
+  | "cached-unlock"      // Session restore: enter password to decrypt local vault
   | "qr";
 
 const useStyles = makeStyles({
@@ -164,10 +166,14 @@ export function SetupPage() {
   const styles = useStyles();
   const navigate = useNavigate();
   const { setServerUrl, setConnectionMode, setSession, setVaultData } = useAppStore();
+  const location = useLocation();
 
   const [view, setView] = useState<SetupView>("home");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // Session restore data passed via navigation state from App.tsx
+  const [cachedSession, setCachedSession] = useState<RestoreResult | null>(null);
 
   // Cloud fields
   const [cloudEmail, setCloudEmail] = useState("");
@@ -187,7 +193,19 @@ export function SetupPage() {
     setView("home");
     setError("");
     setBusy(false);
+    setCachedSession(null);
   };
+
+  // Check if we arrived with a cached session for quick unlock
+  useEffect(() => {
+    const state = location.state as { restoreData?: RestoreResult } | null;
+    if (state?.restoreData) {
+      setCachedSession(state.restoreData);
+      setShUrl(state.restoreData.serverUrl);
+      setInstanceToken(state.restoreData.instanceToken ?? "");
+      setView("cached-unlock");
+    }
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function parseVaultTokens(vaultJson: string): Token[] {
     try {
@@ -251,6 +269,33 @@ export function SetupPage() {
       setServerUrl(shUrl);
       setConnectionMode("selfhosted");
       setSession(result.handle, result.jwt, instanceToken, result.vaultVersion);
+      setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
+      navigate("/");
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ── Cached unlock: re-derive keys, decrypt local vault ────
+  const handleCachedUnlock = async () => {
+    if (!cachedSession) return;
+    setBusy(true);
+    setError("");
+    try {
+      // Always need to: fetch instanceSalt → re-derive keys → create new session
+      // (crypto keys are zeroized on process exit, so cmdShOpen is always required)
+      const health = await cmdHealth(cachedSession.serverUrl, cachedSession.instanceToken ?? undefined);
+      const result = await cmdShOpen(
+        cachedSession.serverUrl,
+        cachedSession.instanceToken ?? "",
+        health.instanceSalt,
+        masterPassword
+      );
+      setServerUrl(cachedSession.serverUrl);
+      setConnectionMode(cachedSession.connectionMode === "selfhosted" ? "selfhosted" : "cloud");
+      setSession(result.handle, result.jwt, cachedSession.instanceToken, result.vaultVersion);
       setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
       navigate("/");
     } catch (e) {
@@ -609,6 +654,67 @@ export function SetupPage() {
                 Unlock
               </Button>
             )}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── Cached unlock: quick password entry ─────────────────────
+  if (view === "cached-unlock" && cachedSession) {
+    const canSubmit = masterPassword.length > 0;
+    return (
+      <div className={styles.page}>
+        <Card className={styles.card}>
+          <Button
+            className={styles.backButton}
+            appearance="subtle"
+            icon={<ChevronLeft24Regular />}
+            onClick={goHome}
+          >
+            Back
+          </Button>
+          <Title2 className={styles.viewTitle}>Welcome back</Title2>
+          <Body1
+            style={{
+              color: tokens.colorNeutralForeground3,
+              marginBottom: "20px",
+            }}
+          >
+            {cachedSession.serverUrl}
+          </Body1>
+          <div className={styles.form}>
+            <ErrorBar />
+            <Input
+              placeholder="Master password"
+              type="password"
+              value={masterPassword}
+              onChange={(_, d) => setMasterPassword(d.value)}
+              contentBefore={<LockClosed24Regular />}
+              size="large"
+            />
+            {busy ? (
+              <div className={styles.loadingRow}>
+                <Spinner size="small" label="Unlocking..." />
+              </div>
+            ) : (
+              <Button
+                appearance="primary"
+                size="large"
+                onClick={handleCachedUnlock}
+                disabled={!canSubmit}
+              >
+                Unlock
+              </Button>
+            )}
+            <Body2 className={styles.formFooter}>
+              <button
+                className={styles.switchLink}
+                onClick={goHome}
+              >
+                Use a different server
+              </button>
+            </Body2>
           </div>
         </Card>
       </div>

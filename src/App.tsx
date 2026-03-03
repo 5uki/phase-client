@@ -11,7 +11,7 @@ import { SetupPage } from "./components/auth/SetupPage";
 import { TokenListPage } from "./components/tokens/TokenListPage";
 import { SettingsPage } from "./components/settings/SettingsPage";
 import { useAppStore } from "./store/appStore";
-import { cmdLoadLocalVault } from "./lib/tauri";
+import { cmdRestoreSession } from "./lib/tauri";
 import "./App.css";
 
 function AppRoutes() {
@@ -19,21 +19,20 @@ function AppRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Session restore: check for cached local vault on startup
+  // Session restore: check for cached session on startup
   useEffect(() => {
     if (isAuthenticated) return;
-    cmdLoadLocalVault()
+    cmdRestoreSession()
       .then((data) => {
         if (data) {
-          // Have a cached vault — navigate to setup with a hint to skip server check
           navigate("/setup", {
-            state: { hasCachedVault: true },
+            state: { restoreData: data },
             replace: true,
           });
         }
       })
       .catch(() => {
-        // No vault or error — normal setup flow
+        // No session or error — normal setup flow
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

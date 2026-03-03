@@ -87,8 +87,21 @@ pub fn decrypt_vault(encrypted_b64: &str, key: &[u8; 32]) -> Result<String, Stri
     String::from_utf8(plaintext).map_err(|e| format!("UTF-8 decode failed: {e}"))
 }
 
+/// Generate a cryptographically random 32-byte salt as a hex string.
+#[allow(dead_code)]
+pub fn generate_salt() -> String {
+    let mut bytes = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    hex::encode(&bytes)
+}
+
 // hex is not a direct dep; use simple impl
 mod hex {
+    #[allow(dead_code)]
+    pub fn encode(bytes: &[u8]) -> String {
+        bytes.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
     pub fn decode(s: &str) -> Result<Vec<u8>, String> {
         if s.len() % 2 != 0 {
             return Err("Odd length hex string".to_string());

@@ -401,6 +401,40 @@ pub async fn cmd_reencrypt_vault(
     Ok(new_handle)
 }
 
+// ── Session restore ───────────────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreResult {
+    pub server_url: String,
+    pub connection_mode: String,
+    pub instance_token: Option<String>,
+    pub vault_version: i64,
+}
+
+/// Attempts to restore a previous session from local storage.
+/// Checks if session.json and vault.bin exist on disk.
+/// Returns session metadata so the frontend can show the quick-unlock screen.
+#[tauri::command]
+pub async fn cmd_restore_session(app: AppHandle) -> Result<Option<RestoreResult>, String> {
+    let session = match vault::load_session(&app)? {
+        Some(s) => s,
+        None => return Ok(None),
+    };
+
+    // Check if local vault blob exists
+    if vault::load_local(&app)?.is_none() {
+        return Ok(None);
+    }
+
+    Ok(Some(RestoreResult {
+        server_url: session.server_url,
+        connection_mode: session.connection_mode,
+        instance_token: session.instance_token,
+        vault_version: session.vault_version,
+    }))
+}
+
 // ── Decrypt local vault blob ───────────────────────────────────────────────
 
 #[tauri::command]

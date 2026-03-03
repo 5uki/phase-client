@@ -15,6 +15,7 @@ import { motion } from "framer-motion";
 import { useAppStore } from "../../store/appStore";
 import { TokenCard } from "./TokenCard";
 import { AddTokenDialog } from "./AddTokenDialog";
+import { EditTokenDialog } from "./EditTokenDialog";
 import {
   cmdTotpStartTicker,
   cmdTotpStopTicker,
@@ -22,6 +23,8 @@ import {
   type TotpCode,
   type UnlistenFn,
 } from "../../lib/tauri";
+
+import type { Token } from "../../types";
 
 const useStyles = makeStyles({
   container: {
@@ -89,6 +92,7 @@ export function TokenListPage() {
   const { tokens: tokenList, groups, activeGroup, searchQuery, setActiveGroup, setSearchQuery } =
     useAppStore();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingToken, setEditingToken] = useState<Token | null>(null);
   const [totpMap, setTotpMap] = useState<Map<string, TotpCode>>(new Map());
   const unlistenRef = useRef<UnlistenFn | null>(null);
 
@@ -185,7 +189,7 @@ export function TokenListPage() {
                 visible: { opacity: 1, y: 0, transition: { duration: 0.18 } },
               }}
             >
-              <TokenCard token={token} totpData={totpMap.get(token.id)} />
+              <TokenCard token={token} totpData={totpMap.get(token.id)} onEdit={setEditingToken} />
             </motion.div>
           ))
         ) : (
@@ -215,6 +219,12 @@ export function TokenListPage() {
       <AddTokenDialog
         open={addDialogOpen}
         onClose={() => setAddDialogOpen(false)}
+      />
+
+      <EditTokenDialog
+        token={editingToken}
+        open={editingToken !== null}
+        onClose={() => setEditingToken(null)}
       />
     </div>
   );

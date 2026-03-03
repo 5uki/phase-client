@@ -21,6 +21,7 @@ import {
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../store/appStore";
 import { cmdPutVault } from "../../lib/tauri";
+import { buildVaultJson } from "../../lib/vault";
 import type { Token } from "../../types";
 
 const useStyles = makeStyles({
@@ -74,12 +75,7 @@ export function AddTokenDialog({ open, onClose }: AddTokenDialogProps) {
       setBusy(true);
       try {
         const updatedTokens = [...tokens, newToken];
-        const vaultJson = JSON.stringify({
-          version: vaultVersion + 1,
-          tokens: updatedTokens,
-          settings: { groups: [], defaultGroup: "", sortOrder: "manual", displayMode: "list" },
-          lastModified: Date.now(),
-        });
+        const vaultJson = buildVaultJson(updatedTokens, vaultVersion + 1);
         const newVersion = await cmdPutVault(
           sessionHandle,
           serverUrl,
@@ -105,6 +101,11 @@ export function AddTokenDialog({ open, onClose }: AddTokenDialogProps) {
   };
 
   const isValid = issuer.trim() && account.trim() && secret.trim();
+
+  const availableGroups = Array.from(new Set([
+    "Personal", "Work",
+    ...groups.filter(g => g !== "All"),
+  ]));
 
   return (
     <Dialog open={open} onOpenChange={(_, data) => !data.open && onClose()}>
@@ -151,13 +152,11 @@ export function AddTokenDialog({ open, onClose }: AddTokenDialogProps) {
                     data.optionValue && setGroup(data.optionValue)
                   }
                 >
-                  {groups
-                    .filter((g) => g !== "All")
-                    .map((g) => (
-                      <Option key={g} value={g}>
-                        {g}
-                      </Option>
-                    ))}
+                  {availableGroups.map((g) => (
+                    <Option key={g} value={g}>
+                      {g}
+                    </Option>
+                  ))}
                 </Dropdown>
               </div>
             </div>

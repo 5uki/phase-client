@@ -24,6 +24,7 @@ pub fn run() {
             commands::cmd_delete_session,
             commands::cmd_logout,
             commands::cmd_reencrypt_vault,
+            commands::cmd_restore_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

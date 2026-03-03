@@ -4,11 +4,12 @@ import {
   Body1,
   Body2,
   Caption1,
+  Button,
   makeStyles,
   tokens,
   Tooltip,
 } from "@fluentui/react-components";
-import { Checkmark16Regular, Copy16Regular } from "@fluentui/react-icons";
+import { Checkmark16Regular, Copy16Regular, Edit20Regular } from "@fluentui/react-icons";
 import type { Token } from "../../types";
 import type { TotpCode } from "../../lib/tauri";
 
@@ -93,6 +94,13 @@ const useStyles = makeStyles({
   copyIcon: {
     color: tokens.colorNeutralForeground3,
   },
+  editButton: {
+    minWidth: "unset",
+    width: "28px",
+    height: "28px",
+    padding: "0",
+    flexShrink: 0,
+  },
 });
 
 const issuerColors: Record<string, string> = {
@@ -109,9 +117,10 @@ const issuerColors: Record<string, string> = {
 interface TokenCardProps {
   token: Token;
   totpData?: TotpCode;
+  onEdit?: (token: Token) => void;
 }
 
-export function TokenCard({ token, totpData }: TokenCardProps) {
+export function TokenCard({ token, totpData, onEdit }: TokenCardProps) {
   const styles = useStyles();
   const [copied, setCopied] = useState(false);
 
@@ -196,6 +205,20 @@ export function TokenCard({ token, totpData }: TokenCardProps) {
           <span className={styles.copyIcon}>
             {copied ? <Checkmark16Regular /> : <Copy16Regular />}
           </span>
+          {onEdit && (
+            <Tooltip content="Edit" relationship="label">
+              <Button
+                className={styles.editButton}
+                appearance="subtle"
+                size="small"
+                icon={<Edit20Regular />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(token);
+                }}
+              />
+            </Tooltip>
+          )}
         </div>
       </Card>
     </Tooltip>
