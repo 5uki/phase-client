@@ -1,5 +1,7 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { AppState, Token } from "../types";
+import { normalizeServerUrl } from "../lib/url";
 
 function deriveGroups(tokens: Token[]): string[] {
   const groupSet = new Set<string>();
@@ -9,7 +11,7 @@ function deriveGroups(tokens: Token[]): string[] {
   return ["All", ...Array.from(groupSet).sort()];
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>()(persist((set, get) => ({
   isAuthenticated: false,
   serverUrl: "https://cloud.phase.app",
   connectionMode: "cloud",
@@ -20,6 +22,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   vaultVersion: 0,
 
   theme: "system",
+  biometricLockEnabled: false,
 
   tokens: [],
   groups: ["All"],
@@ -27,9 +30,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   searchQuery: "",
 
   setAuthenticated: (value) => set({ isAuthenticated: value }),
-  setServerUrl: (url) => set({ serverUrl: url }),
+  setServerUrl: (url) => set({ serverUrl: normalizeServerUrl(url) }),
   setConnectionMode: (mode) => set({ connectionMode: mode }),
   setTheme: (theme) => set({ theme }),
+  setBiometricLockEnabled: (enabled) => set({ biometricLockEnabled: enabled }),
   setActiveGroup: (group) => set({ activeGroup: group }),
   setSearchQuery: (query) => set({ searchQuery: query }),
 
@@ -74,4 +78,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       searchQuery: state.searchQuery,
     });
   },
+}), {
+  name: "phase-client-app",
+  storage: createJSONStorage(() => localStorage),
+  partialize: (state) => ({
+    serverUrl: state.serverUrl,
+    connectionMode: state.connectionMode,
+    theme: state.theme,
+    biometricLockEnabled: state.biometricLockEnabled,
+    instanceToken: state.instanceToken,
+  }),
 }));

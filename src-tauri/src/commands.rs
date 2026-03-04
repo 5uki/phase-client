@@ -119,9 +119,9 @@ pub async fn cmd_sh_setup(
     server_url: String,
     instance_token: String,
     instance_salt: String,
-    master_password: String,
+    _master_password: String,
 ) -> Result<SessionResult, String> {
-    let (enc_key, _auth_hash) = crypto::derive_keys(&master_password, &instance_salt)?;
+    let (enc_key, _auth_hash) = crypto::derive_keys(&instance_token, &instance_salt)?;
 
     let empty_vault = r#"{"version":1,"tokens":[],"settings":{"groups":[],"defaultGroup":"","sortOrder":"manual","displayMode":"list"},"lastModified":0}"#;
     let encrypted_vault = crypto::encrypt_vault(empty_vault, &enc_key)?;
@@ -136,7 +136,7 @@ pub async fn cmd_sh_setup(
         &SessionData {
             jwt: jwt.clone(),
             server_url: server_url.clone(),
-            connection_mode: "self-hosted".to_string(),
+            connection_mode: "selfhosted".to_string(),
             instance_token: Some(instance_token),
             vault_version: 1,
         },
@@ -168,9 +168,9 @@ pub async fn cmd_sh_open(
     server_url: String,
     instance_token: String,
     instance_salt: String,
-    master_password: String,
+    _master_password: String,
 ) -> Result<SessionResult, String> {
-    let (enc_key, _auth_hash) = crypto::derive_keys(&master_password, &instance_salt)?;
+    let (enc_key, _auth_hash) = crypto::derive_keys(&instance_token, &instance_salt)?;
 
     let dev_name = device_name();
     let auth_resp = api::open(&server_url, &instance_token, &dev_name).await?;
@@ -187,7 +187,7 @@ pub async fn cmd_sh_open(
         &SessionData {
             jwt: jwt.clone(),
             server_url: server_url.clone(),
-            connection_mode: "self-hosted".to_string(),
+            connection_mode: "selfhosted".to_string(),
             instance_token: Some(instance_token.clone()),
             vault_version: vault_resp.version,
         },
