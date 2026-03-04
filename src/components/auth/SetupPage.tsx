@@ -35,6 +35,7 @@ import {
   type RestoreResult,
 } from "../../lib/tauri";
 import type { Token } from "../../types";
+import { normalizeServerUrl } from "../../lib/url";
 
 type SetupView =
   | "home"
@@ -206,12 +207,37 @@ export function SetupPage() {
   // Check if we arrived with a cached session for quick unlock
   useEffect(() => {
     const state = location.state as { restoreData?: RestoreResult } | null;
-    if (state?.restoreData) {
-      setCachedSession(state.restoreData);
-      setShUrl(state.restoreData.serverUrl);
-      setInstanceToken(state.restoreData.instanceToken ?? "");
-      setView("cached-unlock");
-    }
+    if (!state?.restoreData) return;
+    const restoreData = state.restoreData;
+
+    setCachedSession(restoreData);
+    setShUrl(normalizeServerUrl(restoreData.serverUrl));
+    setInstanceToken(restoreData.instanceToken ?? "");
+
+    setBusy(true);
+    setError("");
+    (async () => {
+      try {
+        const normalizedUrl = normalizeServerUrl(restoreData.serverUrl);
+        const health = await cmdHealth(normalizedUrl, restoreData.instanceToken ?? undefined);
+        const result = await cmdShOpen(
+          normalizedUrl,
+          restoreData.instanceToken ?? "",
+          health.instanceSalt,
+          ""
+        );
+        setServerUrl(normalizedUrl);
+        setConnectionMode(restoreData.connectionMode === "self-hosted" || restoreData.connectionMode === "selfhosted" ? "selfhosted" : "cloud");
+        setSession(result.handle, result.jwt, restoreData.instanceToken, result.vaultVersion);
+        setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
+        navigate("/");
+      } catch (e) {
+        setError(String(e));
+        setView("selfhosted-url");
+      } finally {
+        setBusy(false);
+      }
+    })();
   }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function parseVaultTokens(vaultJson: string): Token[] {
@@ -235,16 +261,26 @@ export function SetupPage() {
 
   // ── Self-hosted: verify URL + Instance Token ───────────────
   const handleCheckServer = async () => {
-    if (!shUrl.trim() || !instanceToken.trim()) return;
+    const normalizedUrl = normalizeServerUrl(shUrl);
+    if (!normalizedUrl || !instanceToken.trim()) return;
     setBusy(true);
     setError("");
     try {
-      const health = await cmdHealth(shUrl, instanceToken);
+      const health = await cmdHealth(normalizedUrl, instanceToken);
       setInstanceSalt(health.instanceSalt);
-      setBusy(false);
-      setView(health.initialized ? "selfhosted-login" : "selfhosted-init");
+
+      const result = health.initialized
+        ? await cmdShOpen(normalizedUrl, instanceToken, health.instanceSalt, "")
+        : await cmdShSetup(normalizedUrl, instanceToken, health.instanceSalt, "");
+
+      setServerUrl(normalizedUrl);
+      setConnectionMode("selfhosted");
+      setSession(result.handle, result.jwt, instanceToken, result.vaultVersion);
+      setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
+      navigate("/");
     } catch (e) {
       setError(String(e));
+    } finally {
       setBusy(false);
     }
   };
@@ -254,8 +290,9 @@ export function SetupPage() {
     setBusy(true);
     setError("");
     try {
-      const result = await cmdShSetup(shUrl, instanceToken, instanceSalt, masterPassword);
-      setServerUrl(shUrl);
+      const normalizedUrl = normalizeServerUrl(shUrl);
+      const result = await cmdShSetup(normalizedUrl, instanceToken, instanceSalt, "");
+      setServerUrl(normalizeServerUrl(shUrl));
       setConnectionMode("selfhosted");
       setSession(result.handle, result.jwt, instanceToken, result.vaultVersion);
       setVaultData([], result.vaultVersion);
@@ -272,8 +309,9 @@ export function SetupPage() {
     setBusy(true);
     setError("");
     try {
-      const result = await cmdShOpen(shUrl, instanceToken, instanceSalt, masterPassword);
-      setServerUrl(shUrl);
+      const normalizedUrl = normalizeServerUrl(shUrl);
+      const result = await cmdShOpen(normalizedUrl, instanceToken, instanceSalt, "");
+      setServerUrl(normalizeServerUrl(shUrl));
       setConnectionMode("selfhosted");
       setSession(result.handle, result.jwt, instanceToken, result.vaultVersion);
       setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
@@ -293,14 +331,15 @@ export function SetupPage() {
     try {
       // Always need to: fetch instanceSalt → re-derive keys → create new session
       // (crypto keys are zeroized on process exit, so cmdShOpen is always required)
-      const health = await cmdHealth(cachedSession.serverUrl, cachedSession.instanceToken ?? undefined);
+      const normalizedUrl = normalizeServerUrl(cachedSession.serverUrl);
+      const health = await cmdHealth(normalizedUrl, cachedSession.instanceToken ?? undefined);
       const result = await cmdShOpen(
-        cachedSession.serverUrl,
+        normalizedUrl,
         cachedSession.instanceToken ?? "",
         health.instanceSalt,
-        masterPassword
+        ""
       );
-      setServerUrl(cachedSession.serverUrl);
+      setServerUrl(normalizedUrl);
       setConnectionMode(cachedSession.connectionMode === "self-hosted" || cachedSession.connectionMode === "selfhosted" ? "selfhosted" : "cloud");
       setSession(result.handle, result.jwt, cachedSession.instanceToken, result.vaultVersion);
       setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
@@ -508,7 +547,7 @@ export function SetupPage() {
 
   // ── Self-hosted: Step 1 — URL + Instance Token ─────────────
   if (view === "selfhosted-url") {
-    const canSubmit = shUrl.trim() && instanceToken.trim();
+    const canSubmit = Boolean(normalizeServerUrl(shUrl) && instanceToken.trim());
     return (
       <div className={styles.page}>
         <Card className={styles.card}>
@@ -616,7 +655,7 @@ export function SetupPage() {
 
   // ── Self-hosted: Step 2b — login to existing vault ─────────
   if (view === "selfhosted-login") {
-    const canSubmit = masterPassword.length > 0;
+    const canSubmit = true;
     return (
       <div className={styles.page}>
         <Card className={styles.card}>
@@ -669,7 +708,7 @@ export function SetupPage() {
 
   // ── Cached unlock: quick password entry ─────────────────────
   if (view === "cached-unlock" && cachedSession) {
-    const canSubmit = masterPassword.length > 0;
+    const canSubmit = true;
     return (
       <div className={styles.page}>
         <Card className={styles.card}>

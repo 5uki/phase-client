@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { AppState, Token } from "../types";
+import { normalizeServerUrl } from "../lib/url";
 
 function deriveGroups(tokens: Token[]): string[] {
   const groupSet = new Set<string>();
@@ -29,7 +30,7 @@ export const useAppStore = create<AppState>()(persist((set, get) => ({
   searchQuery: "",
 
   setAuthenticated: (value) => set({ isAuthenticated: value }),
-  setServerUrl: (url) => set({ serverUrl: url }),
+  setServerUrl: (url) => set({ serverUrl: normalizeServerUrl(url) }),
   setConnectionMode: (mode) => set({ connectionMode: mode }),
   setTheme: (theme) => set({ theme }),
   setBiometricLockEnabled: (enabled) => set({ biometricLockEnabled: enabled }),

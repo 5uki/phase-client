@@ -274,3 +274,29 @@ Security constraints:
 - Require user re-enter master password when enabling/disabling biometric-first unlock.
 - Include replay protection (nonce/challenge + short expiration).
 - Provide admin/user-visible list of biometric-capable devices.
+
+---
+
+## 11. Token-only vault unlock (no master password)
+
+Per updated product requirement, vault unlock should not require a password prompt in the client.
+Client unlock is now based on:
+- `instanceToken` (server access control), and
+- optional local biometric verification (UI privacy gate only).
+
+### Backend coordination required
+
+1. `POST /api/v1/auth/unlock` should authenticate by instance token + device/session context only.
+2. Vault decryption key management must be server-side (or device-bound key escrow) because client no longer asks user password.
+3. Keep strict transport/security controls:
+   - HTTPS only
+   - short-lived JWT
+   - session revocation
+   - device list + revoke support
+4. If biometric is enabled on client, treat it as **local screen privacy**, not backend auth. Backend should still enforce session/JWT checks.
+
+### Suggested migration plan
+
+- Existing password-derived vaults: provide one-time migration endpoint that re-encrypts vault under server-managed/device-managed key model.
+- New instances: create vault directly under token-only unlock flow.
+- Keep an admin toggle to force password-based mode for high-security deployments.
