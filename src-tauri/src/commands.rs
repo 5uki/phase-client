@@ -136,7 +136,7 @@ pub async fn cmd_sh_setup(
         &SessionData {
             jwt: jwt.clone(),
             server_url: server_url.clone(),
-            connection_mode: "self-hosted".to_string(),
+            connection_mode: "selfhosted".to_string(),
             instance_token: Some(instance_token),
             vault_version: 1,
         },
@@ -187,7 +187,7 @@ pub async fn cmd_sh_open(
         &SessionData {
             jwt: jwt.clone(),
             server_url: server_url.clone(),
-            connection_mode: "self-hosted".to_string(),
+            connection_mode: "selfhosted".to_string(),
             instance_token: Some(instance_token.clone()),
             vault_version: vault_resp.version,
         },

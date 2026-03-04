@@ -46,6 +46,7 @@ export interface AppState {
 
   // UI
   theme: ThemePreference;
+  biometricLockEnabled: boolean;
 
   // Vault data
   tokens: Token[];
@@ -58,6 +59,7 @@ export interface AppState {
   setServerUrl: (url: string) => void;
   setConnectionMode: (mode: ConnectionMode) => void;
   setTheme: (theme: ThemePreference) => void;
+  setBiometricLockEnabled: (enabled: boolean) => void;
   setActiveGroup: (group: string) => void;
   setSearchQuery: (query: string) => void;
   addToken: (token: Token) => void;

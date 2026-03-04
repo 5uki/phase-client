@@ -41,6 +41,11 @@ import {
   cmdTotpStopTicker,
   type DeviceSession,
 } from "../../lib/tauri";
+import {
+  registerBiometricCredential,
+  clearBiometricCredential,
+  hasBiometricCredential,
+} from "../../lib/biometric";
 
 const useStyles = makeStyles({
   container: {
@@ -142,6 +147,8 @@ export function SettingsPage() {
   const {
     theme,
     setTheme,
+    biometricLockEnabled,
+    setBiometricLockEnabled,
     serverUrl,
     sessionHandle,
     jwt,
@@ -152,6 +159,7 @@ export function SettingsPage() {
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  const [biometricBusy, setBiometricBusy] = useState(false);
 
   // Load sessions when page mounts
   useEffect(() => {
@@ -176,6 +184,28 @@ export function SettingsPage() {
       clearSession();
       setLogoutBusy(false);
       navigate("/setup", { replace: true });
+    }
+  };
+
+  const handleBiometricToggle = async (_ev: unknown, data: { checked: boolean }) => {
+    const enabled = Boolean(data.checked);
+    setBiometricBusy(true);
+    try {
+      if (enabled) {
+        await registerBiometricCredential();
+        setBiometricLockEnabled(true);
+      } else {
+        clearBiometricCredential();
+        setBiometricLockEnabled(false);
+      }
+    } catch (e) {
+      console.error("Biometric setup error:", e);
+      if (!enabled) {
+        clearBiometricCredential();
+      }
+      setBiometricLockEnabled(false);
+    } finally {
+      setBiometricBusy(false);
     }
   };
 
@@ -306,11 +336,15 @@ export function SettingsPage() {
               <div className={styles.rowText}>
                 <Body1 className={styles.rowLabel}>Biometric unlock</Body1>
                 <Caption1 className={styles.rowDesc}>
-                  Use Windows Hello to unlock your vault
+                  Use device biometrics to unlock when app returns to foreground
                 </Caption1>
               </div>
             </div>
-            <Switch />
+            <Switch
+              checked={biometricLockEnabled && hasBiometricCredential()}
+              onChange={handleBiometricToggle}
+              disabled={biometricBusy}
+            />
           </div>
           <Divider />
           <div className={styles.row}>

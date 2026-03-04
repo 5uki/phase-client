@@ -165,7 +165,14 @@ const useStyles = makeStyles({
 export function SetupPage() {
   const styles = useStyles();
   const navigate = useNavigate();
-  const { setServerUrl, setConnectionMode, setSession, setVaultData } = useAppStore();
+  const {
+    serverUrl,
+    instanceToken: storedInstanceToken,
+    setServerUrl,
+    setConnectionMode,
+    setSession,
+    setVaultData,
+  } = useAppStore();
   const location = useLocation();
 
   const [view, setView] = useState<SetupView>("home");
@@ -183,8 +190,8 @@ export function SetupPage() {
   const [regConfirm, setRegConfirm] = useState("");
 
   // Self-hosted fields
-  const [shUrl, setShUrl] = useState("");
-  const [instanceToken, setInstanceToken] = useState("");
+  const [shUrl, setShUrl] = useState(serverUrl === "https://cloud.phase.app" ? "" : serverUrl);
+  const [instanceToken, setInstanceToken] = useState(storedInstanceToken ?? "");
   const [instanceSalt, setInstanceSalt] = useState("");
   const [masterPassword, setMasterPassword] = useState("");
   const [masterConfirm, setMasterConfirm] = useState("");
@@ -294,7 +301,7 @@ export function SetupPage() {
         masterPassword
       );
       setServerUrl(cachedSession.serverUrl);
-      setConnectionMode(cachedSession.connectionMode === "selfhosted" ? "selfhosted" : "cloud");
+      setConnectionMode(cachedSession.connectionMode === "self-hosted" || cachedSession.connectionMode === "selfhosted" ? "selfhosted" : "cloud");
       setSession(result.handle, result.jwt, cachedSession.instanceToken, result.vaultVersion);
       setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
       navigate("/");

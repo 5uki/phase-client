@@ -247,3 +247,30 @@ Verify `currentAuthHash` before applying changes.
 | Vault CRUD endpoints | **Required** | Core functionality |
 | Session management endpoints | **Recommended** | Multi-device UX |
 | Change password endpoint | **Recommended** | Account management |
+
+---
+
+## 10. (Optional) Biometric-first unlock without master password
+
+Current client behavior supports biometric **screen lock** (local privacy lock) after a session is already decrypted.
+This does **not** remove the need to enter master password after app restart, because encryption keys are not persisted.
+
+If you want true "open app with biometrics only" on mobile, backend needs a device-bound unwrap flow:
+
+1. Client generates a random `deviceUnlockKey` (32 bytes) and stores it in secure enclave/keystore protected by biometrics.
+2. Client wraps vault encryption key with `deviceUnlockKey`, uploads wrapped blob to backend as `wrappedDeviceKey` per device.
+3. On app launch, client performs biometric auth locally, unwraps key, then requests a short-lived unlock token from backend.
+4. Backend verifies device session + token freshness and returns encrypted vault without requiring password-derived `authHash`.
+5. Add revocation endpoint to remove lost/stolen device unlock grants.
+
+Recommended backend endpoints:
+- `POST /api/v1/auth/device-unlock/register`
+- `POST /api/v1/auth/device-unlock/challenge`
+- `POST /api/v1/auth/device-unlock/verify`
+- `DELETE /api/v1/auth/device-unlock/:deviceId`
+
+Security constraints:
+- Bind grants to existing authenticated session + device id.
+- Require user re-enter master password when enabling/disabling biometric-first unlock.
+- Include replay protection (nonce/challenge + short expiration).
+- Provide admin/user-visible list of biometric-capable devices.
