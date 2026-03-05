@@ -133,7 +133,7 @@ jobs:
         run: pnpm tauri android init
 
       - name: Build Android APK (release, arm64 only)
-        run: pnpm tauri android build --target aarch64-linux-android
+        run: pnpm tauri android build --target aarch64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -175,7 +175,7 @@ jobs:
         run: pnpm tauri ios init
 
       - name: Build iOS (simulator, no signing)
-        run: pnpm tauri ios build -- --configuration Debug CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM=""
+        run: pnpm tauri ios build --debug --target aarch64-apple-ios-sim
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
