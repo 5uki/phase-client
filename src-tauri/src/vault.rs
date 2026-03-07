@@ -23,6 +23,8 @@ pub struct SessionData {
     pub server_url: String,
     pub connection_mode: String,
     pub instance_token: Option<String>,
+    #[serde(default)]
+    pub device_id: Option<String>,
     pub vault_version: i64,
 }
 
@@ -73,8 +75,7 @@ pub fn save_session(app: &AppHandle, data: &SessionData) -> Result<(), String> {
         .store(SESSION_STORE_PATH)
         .map_err(|e| format!("Open store: {e}"))?;
 
-    let value =
-        serde_json::to_value(data).map_err(|e| format!("Serialize session: {e}"))?;
+    let value = serde_json::to_value(data).map_err(|e| format!("Serialize session: {e}"))?;
     store.set("session", value);
     store.save().map_err(|e| format!("Save store: {e}"))?;
     Ok(())

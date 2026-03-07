@@ -9,12 +9,7 @@ type HmacSha256 = Hmac<Sha256>;
 type HmacSha512 = Hmac<Sha512>;
 
 /// Compute HOTP value given a raw key, counter, digit count, and algorithm.
-pub fn compute_hotp(
-    key: &[u8],
-    counter: u64,
-    digits: u32,
-    algo: &str,
-) -> Result<String, String> {
+pub fn compute_hotp(key: &[u8], counter: u64, digits: u32, algo: &str) -> Result<String, String> {
     let counter_bytes = counter.to_be_bytes();
 
     // Compute HMAC

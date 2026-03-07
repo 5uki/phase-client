@@ -42,6 +42,7 @@ export interface AppState {
   sessionHandle: string | null;
   jwt: string | null;
   instanceToken: string | null;
+  deviceId: string | null;
   vaultVersion: number;
 
   // UI
@@ -71,6 +72,7 @@ export interface AppState {
     handle: string,
     jwt: string,
     instanceToken: string | null,
+    deviceId: string | null,
     vaultVersion: number
   ) => void;
   setVaultData: (tokens: Token[], version: number) => void;

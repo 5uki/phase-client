@@ -76,6 +76,7 @@ fn device_name() -> String {
 pub struct SessionResult {
     pub handle: String,
     pub jwt: String,
+    pub device_id: Option<String>,
     pub vault_json: String,
     pub vault_version: i64,
 }
@@ -138,6 +139,7 @@ pub async fn cmd_sh_setup(
             server_url: server_url.clone(),
             connection_mode: "selfhosted".to_string(),
             instance_token: Some(instance_token),
+            device_id: auth_resp.device_id.clone(),
             vault_version: 1,
         },
     )?;
@@ -153,6 +155,7 @@ pub async fn cmd_sh_setup(
     Ok(SessionResult {
         handle,
         jwt,
+        device_id: auth_resp.device_id,
         vault_json: empty_vault.to_string(),
         vault_version: 1,
     })
@@ -169,11 +172,18 @@ pub async fn cmd_sh_open(
     instance_token: String,
     instance_salt: String,
     _master_password: String,
+    device_id: Option<String>,
 ) -> Result<SessionResult, String> {
     let (enc_key, _auth_hash) = crypto::derive_keys(&instance_token, &instance_salt)?;
 
     let dev_name = device_name();
-    let auth_resp = api::open(&server_url, &instance_token, &dev_name).await?;
+    let auth_resp = api::open(
+        &server_url,
+        &instance_token,
+        &dev_name,
+        device_id.as_deref(),
+    )
+    .await?;
     let jwt = auth_resp.token.clone();
 
     // Fetch and decrypt vault
@@ -189,6 +199,7 @@ pub async fn cmd_sh_open(
             server_url: server_url.clone(),
             connection_mode: "selfhosted".to_string(),
             instance_token: Some(instance_token.clone()),
+            device_id: auth_resp.device_id.clone(),
             vault_version: vault_resp.version,
         },
     )?;
@@ -204,6 +215,7 @@ pub async fn cmd_sh_open(
     Ok(SessionResult {
         handle,
         jwt,
+        device_id: auth_resp.device_id,
         vault_json,
         vault_version: vault_resp.version,
     })
@@ -265,10 +277,7 @@ pub fn cmd_clear_session(app: AppHandle, handle: String) -> Result<(), String> {
 // ── TOTP ticker ───────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn cmd_totp_start_ticker(
-    app: AppHandle,
-    entries: Vec<TotpEntry>,
-) -> Result<(), String> {
+pub async fn cmd_totp_start_ticker(app: AppHandle, entries: Vec<TotpEntry>) -> Result<(), String> {
     {
         let mut guard = TICKER_HANDLE.lock().unwrap();
         if let Some(handle) = guard.take() {
@@ -409,6 +418,7 @@ pub struct RestoreResult {
     pub server_url: String,
     pub connection_mode: String,
     pub instance_token: Option<String>,
+    pub device_id: Option<String>,
     pub vault_version: i64,
 }
 
@@ -431,6 +441,7 @@ pub async fn cmd_restore_session(app: AppHandle) -> Result<Option<RestoreResult>
         server_url: session.server_url,
         connection_mode: session.connection_mode,
         instance_token: session.instance_token,
+        device_id: session.device_id,
         vault_version: session.vault_version,
     }))
 }
@@ -438,10 +449,7 @@ pub async fn cmd_restore_session(app: AppHandle) -> Result<Option<RestoreResult>
 // ── Decrypt local vault blob ───────────────────────────────────────────────
 
 #[tauri::command]
-pub fn cmd_decrypt_local_vault(
-    app: AppHandle,
-    handle: String,
-) -> Result<String, String> {
+pub fn cmd_decrypt_local_vault(app: AppHandle, handle: String) -> Result<String, String> {
     let key = get_enc_key(&handle)?;
     let local = vault::load_local(&app)?.ok_or("No local vault found")?;
     crypto::decrypt_vault(&local.encrypted_b64, &key)

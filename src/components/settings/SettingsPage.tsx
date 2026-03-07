@@ -161,7 +161,7 @@ export function SettingsPage() {
   const [logoutBusy, setLogoutBusy] = useState(false);
   const [biometricBusy, setBiometricBusy] = useState(false);
 
-  // Load sessions when page mounts
+  // Load device list when page mounts
   useEffect(() => {
     if (!jwt) return;
     setSessionsLoading(true);
@@ -429,21 +429,27 @@ export function SettingsPage() {
         </Card>
       </div>
 
-      {/* Sessions */}
+      {/* Device Management */}
       <div className={styles.section}>
         <div className={styles.sectionTitle}>
           <Laptop24Regular />
-          <Body2>Sessions</Body2>
+          <Body2>Device Management</Body2>
         </div>
         <Card className={styles.card}>
+          <div className={styles.row}>
+            <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+              Core UX uses device-based security. Session data below is advanced/debug information.
+            </Caption1>
+          </div>
+          <Divider />
           {sessionsLoading ? (
             <div className={styles.sessionsLoading}>
-              <Spinner size="small" label="Loading sessions..." />
+              <Spinner size="small" label="Loading devices..." />
             </div>
           ) : sessions.length === 0 ? (
             <div className={styles.row}>
               <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-                No sessions found
+                No devices found
               </Caption1>
             </div>
           ) : (
