@@ -45,8 +45,7 @@ pub fn derive_keys(password: &str, salt_hex: &str) -> Result<([u8; 32], [u8; 32]
 /// Encrypt plaintext with AES-256-GCM.
 /// Output: Base64(12-byte IV || ciphertext+tag)
 pub fn encrypt_vault(plaintext: &str, key: &[u8; 32]) -> Result<String, String> {
-    let cipher =
-        Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES init failed: {e}"))?;
+    let cipher = Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES init failed: {e}"))?;
 
     let mut iv = [0u8; 12];
     rand::thread_rng().fill_bytes(&mut iv);
@@ -77,8 +76,7 @@ pub fn decrypt_vault(encrypted_b64: &str, key: &[u8; 32]) -> Result<String, Stri
     let (iv, ciphertext) = combined.split_at(12);
     let nonce = Nonce::from_slice(iv);
 
-    let cipher =
-        Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES init failed: {e}"))?;
+    let cipher = Aes256Gcm::new_from_slice(key).map_err(|e| format!("AES init failed: {e}"))?;
 
     let plaintext = cipher
         .decrypt(nonce, ciphertext)

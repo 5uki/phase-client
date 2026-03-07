@@ -169,6 +169,7 @@ export function SetupPage() {
   const {
     serverUrl,
     instanceToken: storedInstanceToken,
+    deviceId: storedDeviceId,
     setServerUrl,
     setConnectionMode,
     setSession,
@@ -224,11 +225,18 @@ export function SetupPage() {
           normalizedUrl,
           restoreData.instanceToken ?? "",
           health.instanceSalt,
-          ""
+          "",
+          restoreData.deviceId ?? storedDeviceId ?? undefined
         );
         setServerUrl(normalizedUrl);
         setConnectionMode(restoreData.connectionMode === "self-hosted" || restoreData.connectionMode === "selfhosted" ? "selfhosted" : "cloud");
-        setSession(result.handle, result.jwt, restoreData.instanceToken, result.vaultVersion);
+        setSession(
+          result.handle,
+          result.jwt,
+          restoreData.instanceToken,
+          result.deviceId ?? restoreData.deviceId ?? storedDeviceId,
+          result.vaultVersion
+        );
         setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
         navigate("/");
       } catch (e) {
@@ -270,12 +278,12 @@ export function SetupPage() {
       setInstanceSalt(health.instanceSalt);
 
       const result = health.initialized
-        ? await cmdShOpen(normalizedUrl, instanceToken, health.instanceSalt, "")
+        ? await cmdShOpen(normalizedUrl, instanceToken, health.instanceSalt, "", storedDeviceId ?? undefined)
         : await cmdShSetup(normalizedUrl, instanceToken, health.instanceSalt, "");
 
       setServerUrl(normalizedUrl);
       setConnectionMode("selfhosted");
-      setSession(result.handle, result.jwt, instanceToken, result.vaultVersion);
+      setSession(result.handle, result.jwt, instanceToken, result.deviceId ?? storedDeviceId, result.vaultVersion);
       setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
       navigate("/");
     } catch (e) {
@@ -294,7 +302,7 @@ export function SetupPage() {
       const result = await cmdShSetup(normalizedUrl, instanceToken, instanceSalt, "");
       setServerUrl(normalizeServerUrl(shUrl));
       setConnectionMode("selfhosted");
-      setSession(result.handle, result.jwt, instanceToken, result.vaultVersion);
+      setSession(result.handle, result.jwt, instanceToken, result.deviceId ?? storedDeviceId, result.vaultVersion);
       setVaultData([], result.vaultVersion);
       navigate("/");
     } catch (e) {
@@ -310,10 +318,10 @@ export function SetupPage() {
     setError("");
     try {
       const normalizedUrl = normalizeServerUrl(shUrl);
-      const result = await cmdShOpen(normalizedUrl, instanceToken, instanceSalt, "");
+      const result = await cmdShOpen(normalizedUrl, instanceToken, instanceSalt, "", storedDeviceId ?? undefined);
       setServerUrl(normalizeServerUrl(shUrl));
       setConnectionMode("selfhosted");
-      setSession(result.handle, result.jwt, instanceToken, result.vaultVersion);
+      setSession(result.handle, result.jwt, instanceToken, result.deviceId ?? storedDeviceId, result.vaultVersion);
       setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
       navigate("/");
     } catch (e) {
@@ -337,11 +345,18 @@ export function SetupPage() {
         normalizedUrl,
         cachedSession.instanceToken ?? "",
         health.instanceSalt,
-        ""
+        "",
+        cachedSession.deviceId ?? storedDeviceId ?? undefined
       );
       setServerUrl(normalizedUrl);
       setConnectionMode(cachedSession.connectionMode === "self-hosted" || cachedSession.connectionMode === "selfhosted" ? "selfhosted" : "cloud");
-      setSession(result.handle, result.jwt, cachedSession.instanceToken, result.vaultVersion);
+      setSession(
+        result.handle,
+        result.jwt,
+        cachedSession.instanceToken,
+        result.deviceId ?? cachedSession.deviceId ?? storedDeviceId,
+        result.vaultVersion
+      );
       setVaultData(parseVaultTokens(result.vaultJson), result.vaultVersion);
       navigate("/");
     } catch (e) {

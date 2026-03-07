@@ -19,6 +19,7 @@ export const useAppStore = create<AppState>()(persist((set, get) => ({
   sessionHandle: null,
   jwt: null,
   instanceToken: null,
+  deviceId: null,
   vaultVersion: 0,
 
   theme: "system",
@@ -57,8 +58,8 @@ export const useAppStore = create<AppState>()(persist((set, get) => ({
       return { tokens, groups: deriveGroups(tokens) };
     }),
 
-  setSession: (handle, jwt, instanceToken, vaultVersion) =>
-    set({ sessionHandle: handle, jwt, instanceToken, vaultVersion, isAuthenticated: true }),
+  setSession: (handle, jwt, instanceToken, deviceId, vaultVersion) =>
+    set({ sessionHandle: handle, jwt, instanceToken, deviceId, vaultVersion, isAuthenticated: true }),
 
   setVaultData: (tokens, version) =>
     set({ tokens, groups: deriveGroups(tokens), vaultVersion: version }),
@@ -71,6 +72,7 @@ export const useAppStore = create<AppState>()(persist((set, get) => ({
       sessionHandle: null,
       jwt: null,
       instanceToken: null,
+      deviceId: state.deviceId,
       vaultVersion: 0,
       tokens: [],
       groups: ["All"],
@@ -87,5 +89,6 @@ export const useAppStore = create<AppState>()(persist((set, get) => ({
     theme: state.theme,
     biometricLockEnabled: state.biometricLockEnabled,
     instanceToken: state.instanceToken,
+    deviceId: state.deviceId,
   }),
 }));

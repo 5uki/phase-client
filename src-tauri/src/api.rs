@@ -24,6 +24,7 @@ pub struct HealthResponse {
 #[serde(rename_all = "camelCase")]
 pub struct AuthResponse {
     pub token: String,
+    pub device_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -57,6 +58,13 @@ pub struct SessionsResponse {
     pub sessions: Vec<DeviceSession>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DevicesResponse {
+    #[serde(alias = "sessions")]
+    devices: Vec<DeviceSession>,
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 fn api_url(server_url: &str, path: &str) -> String {
@@ -86,7 +94,10 @@ async fn check_response_error(resp: reqwest::Response) -> Result<reqwest::Respon
 
 // ── API functions ──────────────────────────────────────────────────────────
 
-pub async fn health(server_url: &str, instance_token: Option<&str>) -> Result<HealthResponse, String> {
+pub async fn health(
+    server_url: &str,
+    instance_token: Option<&str>,
+) -> Result<HealthResponse, String> {
     let url = api_url(server_url, "/health");
     let req = with_instance_token(HTTP_CLIENT.get(&url), instance_token);
     let resp = req
@@ -106,7 +117,7 @@ pub async fn setup(
     encrypted_vault: &str,
     device_name: &str,
 ) -> Result<AuthResponse, String> {
-    let url = api_url(server_url, "/auth/setup");
+    let url = api_url(server_url, "/auth/init");
     let body = serde_json::json!({
         "encryptedVault": encrypted_vault,
         "deviceName": device_name,
@@ -127,9 +138,10 @@ pub async fn open(
     server_url: &str,
     instance_token: &str,
     device_name: &str,
+    device_id: Option<&str>,
 ) -> Result<AuthResponse, String> {
-    let url = api_url(server_url, "/auth/open");
-    let body = serde_json::json!({ "deviceName": device_name });
+    let url = api_url(server_url, "/auth/unlock");
+    let body = serde_json::json!({ "deviceName": device_name, "deviceId": device_id });
     let resp = with_instance_token(HTTP_CLIENT.post(&url), Some(instance_token))
         .json(&body)
         .send()
@@ -205,7 +217,7 @@ pub async fn get_sessions(
     jwt: &str,
     instance_token: Option<&str>,
 ) -> Result<SessionsResponse, String> {
-    let url = api_url(server_url, "/sessions");
+    let url = api_url(server_url, "/auth/devices");
     let req = with_instance_token(HTTP_CLIENT.get(&url), instance_token);
     let resp = req
         .bearer_auth(jwt)
@@ -213,9 +225,13 @@ pub async fn get_sessions(
         .await
         .map_err(|e| format!("Network error: {e}"))?;
     let resp = check_response_error(resp).await?;
-    resp.json::<SessionsResponse>()
+    let devices = resp
+        .json::<DevicesResponse>()
         .await
-        .map_err(|e| format!("Parse error: {e}"))
+        .map_err(|e| format!("Parse error: {e}"))?;
+    Ok(SessionsResponse {
+        sessions: devices.devices,
+    })
 }
 
 pub async fn delete_session(
@@ -224,7 +240,7 @@ pub async fn delete_session(
     instance_token: Option<&str>,
     session_id: &str,
 ) -> Result<(), String> {
-    let url = api_url(server_url, &format!("/sessions/{session_id}"));
+    let url = api_url(server_url, &format!("/auth/devices/{session_id}"));
     let req = with_instance_token(HTTP_CLIENT.delete(&url), instance_token);
     let resp = req
         .bearer_auth(jwt)

@@ -13,6 +13,7 @@ export interface HealthResponse {
 export interface SessionResult {
   handle: string;
   jwt: string;
+  deviceId?: string | null;
   vaultJson: string;
   vaultVersion: number;
 }
@@ -53,6 +54,7 @@ export interface RestoreResult {
   serverUrl: string;
   connectionMode: string;
   instanceToken: string | null;
+  deviceId: string | null;
   vaultVersion: number;
 }
 
@@ -85,13 +87,15 @@ export const cmdShOpen = (
   serverUrl: string,
   instanceToken: string,
   instanceSalt: string,
-  masterPassword: string
+  masterPassword: string,
+  deviceId?: string
 ): Promise<SessionResult> =>
   invoke<SessionResult>("cmd_sh_open", {
     serverUrl,
     instanceToken,
     instanceSalt,
     masterPassword,
+    deviceId,
   });
 
 export const cmdEncryptVault = (
