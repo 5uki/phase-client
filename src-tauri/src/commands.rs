@@ -501,12 +501,12 @@ pub fn cmd_set_spotlight_shortcut(
     {
         let global_shortcut = app.global_shortcut();
 
-        if let Some(old_str) = old_shortcut {
+        if let Some(old_str) = old_shortcut.as_deref() {
             let _ = global_shortcut.unregister(old_str);
         }
 
         global_shortcut
-            .on_shortcut(new_shortcut, move |app, _shortcut, _event| {
+            .on_shortcut(new_shortcut.as_str(), move |app, _shortcut, _event| {
                 if let Some(window) = app.get_webview_window("spotlight") {
                     let _ = window.show();
                     let _ = window.set_focus();
