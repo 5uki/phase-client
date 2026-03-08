@@ -35,7 +35,6 @@ pub fn run() {
                 .title("Quick Search")
                 .inner_size(640.0, 400.0)
                 .decorations(false)
-                .transparent(true)
                 .visible(false)
                 .always_on_top(true)
                 .center()
