@@ -2,11 +2,12 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
+use tauri::Manager;
 use tauri::{AppHandle, Emitter};
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use tokio::task::AbortHandle;
 use zeroize::Zeroizing;
-use tauri_plugin_global_shortcut::{Shortcut, ShortcutState, GlobalShortcutExt};
-use std::str::FromStr;
 
 use crate::api;
 use crate::crypto;
@@ -465,8 +466,7 @@ pub async fn cmd_offline_unlock(
 ) -> Result<SessionResult, String> {
     let (enc_key, _auth_hash) = crypto::derive_keys(&instance_token, &instance_salt)?;
 
-    let local = vault::load_local(&app)?
-        .ok_or_else(|| "No local vault found".to_string())?;
+    let local = vault::load_local(&app)?.ok_or_else(|| "No local vault found".to_string())?;
 
     let vault_json = crypto::decrypt_vault(&local.encrypted_b64, &enc_key)?;
     let handle = store_session(enc_key);
@@ -492,27 +492,34 @@ pub fn cmd_decrypt_local_vault(app: AppHandle, handle: String) -> Result<String,
 // ── Spotlight shortcut ───────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn cmd_set_spotlight_shortcut(app: AppHandle, old_shortcut: Option<String>, new_shortcut: String) -> Result<(), String> {
-    let global_shortcut = app.global_shortcut();
-    
-    if let Some(old_str) = old_shortcut {
-        if let Ok(old) = Shortcut::from_str(&old_str) {
-            let _ = global_shortcut.unregister(old);
+pub fn cmd_set_spotlight_shortcut(
+    app: AppHandle,
+    old_shortcut: Option<String>,
+    new_shortcut: String,
+) -> Result<(), String> {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        let global_shortcut = app.global_shortcut();
+
+        if let Some(old_str) = old_shortcut {
+            let _ = global_shortcut.unregister(old_str.as_str());
         }
-    }
-    
-    if let Ok(new_sc) = Shortcut::from_str(&new_shortcut) {
-        let _ = global_shortcut.on_shortcut(new_sc, |app, _shortcut, event| {
-            if event.state() == ShortcutState::Pressed {
+
+        global_shortcut
+            .on_shortcut(new_shortcut.as_str(), move |app, _shortcut, _event| {
                 if let Some(window) = app.get_webview_window("spotlight") {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
-            }
-        });
-    } else {
-        return Err("Invalid shortcut format".to_string());
+            })
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
     }
 
-    Ok(())
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = (app, old_shortcut, new_shortcut);
+        Err("Global shortcut is only supported on desktop".to_string())
+    }
 }
