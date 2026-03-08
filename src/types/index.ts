@@ -48,6 +48,7 @@ export interface AppState {
   // UI
   theme: ThemePreference;
   biometricLockEnabled: boolean;
+  spotlightShortcut: string;
 
   // Vault data
   tokens: Token[];
@@ -61,6 +62,7 @@ export interface AppState {
   setConnectionMode: (mode: ConnectionMode) => void;
   setTheme: (theme: ThemePreference) => void;
   setBiometricLockEnabled: (enabled: boolean) => void;
+  setSpotlightShortcut: (shortcut: string) => void;
   setActiveGroup: (group: string) => void;
   setSearchQuery: (query: string) => void;
   addToken: (token: Token) => void;

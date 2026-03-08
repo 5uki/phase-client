@@ -5,6 +5,8 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
 use tokio::task::AbortHandle;
 use zeroize::Zeroizing;
+use tauri_plugin_global_shortcut::{Shortcut, ShortcutState, GlobalShortcutExt};
+use std::str::FromStr;
 
 use crate::api;
 use crate::crypto;
@@ -485,4 +487,32 @@ pub fn cmd_decrypt_local_vault(app: AppHandle, handle: String) -> Result<String,
     let key = get_enc_key(&handle)?;
     let local = vault::load_local(&app)?.ok_or("No local vault found")?;
     crypto::decrypt_vault(&local.encrypted_b64, &key)
+}
+
+// ── Spotlight shortcut ───────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn cmd_set_spotlight_shortcut(app: AppHandle, old_shortcut: Option<String>, new_shortcut: String) -> Result<(), String> {
+    let global_shortcut = app.global_shortcut();
+    
+    if let Some(old_str) = old_shortcut {
+        if let Ok(old) = Shortcut::from_str(&old_str) {
+            let _ = global_shortcut.unregister(old);
+        }
+    }
+    
+    if let Ok(new_sc) = Shortcut::from_str(&new_shortcut) {
+        let _ = global_shortcut.on_shortcut(new_sc, |app, _shortcut, event| {
+            if event.state() == ShortcutState::Pressed {
+                if let Some(window) = app.get_webview_window("spotlight") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+        });
+    } else {
+        return Err("Invalid shortcut format".to_string());
+    }
+
+    Ok(())
 }

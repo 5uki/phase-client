@@ -17,12 +17,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
+  /* Scrollbar styling — overlay so it never shifts layout */
+  scrollbar-gutter: auto;
 }
 
-/* Windows 11 style thin scrollbar */
+/* Overlay scrollbar — never shifts layout */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.25) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -30,19 +37,25 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(120, 120, 120, 0.3);
-  border-radius: 3px;
+  background-color: rgba(120, 120, 120, 0.25);
+  border-radius: 10px;
+  transition: background-color 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(120, 120, 120, 0.5);
+  background-color: rgba(120, 120, 120, 0.55);
+}
+
+/* Make scrollbars overlay (not shift layout) for Webkit */
+.scroll-overlay {
+  overflow-y: overlay !important;
 }
 
 /* Smooth page transitions */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -50,8 +63,39 @@ body {
   }
 }
 
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 main > * {
-  animation: fadeIn 0.15s ease-out;
+  animation: fadeIn 0.18s ease-out;
+}
+
+/* Smooth interactive transitions */
+button, [role="button"] {
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+button:active:not(:disabled), [role="button"]:active:not([aria-disabled="true"]) {
+  transform: scale(0.97);
 }
 
 /* Selection color */

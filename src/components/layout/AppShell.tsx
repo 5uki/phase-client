@@ -10,6 +10,9 @@ import {
   Key24Regular,
   Settings24Regular,
 } from "@fluentui/react-icons";
+import { AddTokenDialog } from "../tokens/AddTokenDialog";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 const SIDEBAR_BREAKPOINT = "640px";
 
@@ -108,7 +111,8 @@ const useStyles = makeStyles({
 
   content: {
     flex: 1,
-    overflowY: "auto",
+    // Use overlay scrolling so the scrollbar doesn't consume layout space
+    overflowY: "auto" as const,
     overflowX: "hidden",
     backgroundColor: tokens.colorNeutralBackground1,
     // Account for safe area on mobile
@@ -117,12 +121,38 @@ const useStyles = makeStyles({
       paddingBottom: "0",
     },
   },
+
+  // FAB lives here so position:fixed is relative to viewport, not a transformed ancestor
+  fab: {
+    // Square shape: 56×56
+    width: "56px",
+    height: "56px",
+    minWidth: "unset",
+    padding: "0",
+    borderRadius: "16px",
+    boxShadow: tokens.shadow16,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Wrapper that handles responsive bottom position via CSS
+  fabWrapper: {
+    position: "fixed" as const,
+    bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
+    right: "24px",
+    zIndex: 100,
+    // On mobile, bump above the bottom bar (52px bar + 24px gap)
+    "@media (max-width: 639px)": {
+      bottom: "calc(76px + env(safe-area-inset-bottom, 0px))",
+    },
+  },
 });
 
 export function AppShell() {
   const styles = useStyles();
   const navigate = useNavigate();
   const location = useLocation();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const isTokens = location.pathname === "/" || location.pathname === "";
   const isSettings = location.pathname === "/settings";
@@ -182,6 +212,48 @@ export function AppShell() {
           Settings
         </Button>
       </nav>
+
+      {/* FAB — hoisted out of page transition so position:fixed is viewport-anchored */}
+      <AnimatePresence>
+        {isTokens && (
+          <motion.div
+            key="fab"
+            className={styles.fabWrapper}
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.7, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+          >
+            <Tooltip content="Add token" relationship="label">
+              <Button
+                className={styles.fab}
+                appearance="primary"
+                onClick={() => setAddDialogOpen(true)}
+                aria-label="Add token"
+              >
+                {/* Square "+" SVG icon — wider than Add24Regular glyph */}
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 22 22"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <rect x="9.5" y="1" width="3" height="20" rx="1.5" fill="currentColor" />
+                  <rect x="1" y="9.5" width="20" height="3" rx="1.5" fill="currentColor" />
+                </svg>
+              </Button>
+            </Tooltip>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AddTokenDialog lives here alongside FAB */}
+      <AddTokenDialog
+        open={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+      />
     </div>
   );
 }

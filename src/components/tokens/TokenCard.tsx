@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Card,
   Body1,
@@ -20,9 +21,10 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     gap: "16px",
-    transition: "background-color 0.15s ease",
+    transition: "background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease",
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground1Hover,
+      boxShadow: tokens.shadow8,
     },
     ":active": {
       backgroundColor: tokens.colorNeutralBackground1Pressed,
@@ -147,80 +149,102 @@ export function TokenCard({ token, totpData, onEdit }: TokenCardProps) {
       content={copied ? "Copied!" : "Click to copy"}
       relationship="label"
     >
-      <Card className={styles.card} onClick={handleCopy}>
-        <div className={styles.avatar} style={{ backgroundColor: bgColor }}>
-          {token.issuer.charAt(0).toUpperCase()}
-        </div>
-        <div className={styles.info}>
-          <Body2 className={styles.issuer}>{token.issuer}</Body2>
-          <Caption1 className={styles.account}>{token.account}</Caption1>
-        </div>
-        <div className={styles.otpRow}>
-          {hasData ? (
-            <Body1 className={styles.otp}>
-              {code.slice(0, Math.ceil(code.length / 2))}{" "}
-              {code.slice(Math.ceil(code.length / 2))}
-            </Body1>
-          ) : (
-            <Body1 className={styles.otpPlaceholder}>------</Body1>
-          )}
-          <div className={styles.countdown}>
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 32 32"
-              className={styles.countdownSvg}
-            >
-              <circle
-                cx="16"
-                cy="16"
-                r={radius}
-                fill="none"
-                stroke={tokens.colorNeutralStroke2}
-                strokeWidth="2.5"
-              />
-              {hasData && (
+      <motion.div
+        whileHover={{ y: -1, transition: { duration: 0.15 } }}
+        whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
+        style={{ width: "100%" }}
+      >
+        <Card className={styles.card} onClick={handleCopy}>
+          <div className={styles.avatar} style={{ backgroundColor: bgColor }}>
+            {token.issuer.charAt(0).toUpperCase()}
+          </div>
+          <div className={styles.info}>
+            <Body2 className={styles.issuer}>{token.issuer}</Body2>
+            <Caption1 className={styles.account}>{token.account}</Caption1>
+          </div>
+          <div className={styles.otpRow}>
+            {hasData ? (
+              <motion.div
+                key={code}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Body1 className={styles.otp}>
+                  {code.slice(0, Math.ceil(code.length / 2))}{" "}
+                  {code.slice(Math.ceil(code.length / 2))}
+                </Body1>
+              </motion.div>
+            ) : (
+              <Body1 className={styles.otpPlaceholder}>------</Body1>
+            )}
+            <div className={styles.countdown}>
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 32 32"
+                className={styles.countdownSvg}
+              >
                 <circle
                   cx="16"
                   cy="16"
                   r={radius}
                   fill="none"
-                  stroke={
-                    isUrgent
-                      ? tokens.colorPaletteRedForeground1
-                      : tokens.colorBrandForeground1
-                  }
+                  stroke={tokens.colorNeutralStroke2}
                   strokeWidth="2.5"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                  style={{ transition: "stroke-dashoffset 1s linear" }}
                 />
-              )}
-            </svg>
-            <span className={styles.countdownText}>
-              {hasData ? secondsLeft : ""}
-            </span>
+                {hasData && (
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r={radius}
+                    fill="none"
+                    stroke={
+                      isUrgent
+                        ? tokens.colorPaletteRedForeground1
+                        : tokens.colorBrandForeground1
+                    }
+                    strokeWidth="2.5"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={dashOffset}
+                    strokeLinecap="round"
+                    style={{ transition: "stroke-dashoffset 1s linear, stroke 0.4s ease" }}
+                  />
+                )}
+              </svg>
+              <span className={styles.countdownText}>
+                {hasData ? secondsLeft : ""}
+              </span>
+            </div>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={copied ? "check" : "copy"}
+                className={styles.copyIcon}
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.6, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 25 }}
+              >
+                {copied ? <Checkmark16Regular /> : <Copy16Regular />}
+              </motion.span>
+            </AnimatePresence>
+            {onEdit && (
+              <Tooltip content="Edit" relationship="label">
+                <Button
+                  className={styles.editButton}
+                  appearance="subtle"
+                  size="small"
+                  icon={<Edit20Regular />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(token);
+                  }}
+                />
+              </Tooltip>
+            )}
           </div>
-          <span className={styles.copyIcon}>
-            {copied ? <Checkmark16Regular /> : <Copy16Regular />}
-          </span>
-          {onEdit && (
-            <Tooltip content="Edit" relationship="label">
-              <Button
-                className={styles.editButton}
-                appearance="subtle"
-                size="small"
-                icon={<Edit20Regular />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(token);
-                }}
-              />
-            </Tooltip>
-          )}
-        </div>
-      </Card>
+        </Card>
+      </motion.div>
     </Tooltip>
   );
 }

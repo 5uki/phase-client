@@ -3,18 +3,15 @@ import {
   tokens,
   TabList,
   Tab,
-  Button,
   Input,
   Body1,
   Title3,
-  Tooltip,
 } from "@fluentui/react-components";
-import { Add24Regular, Search24Regular } from "@fluentui/react-icons";
+import { Search24Regular } from "@fluentui/react-icons";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAppStore } from "../../store/appStore";
 import { TokenCard } from "./TokenCard";
-import { AddTokenDialog } from "./AddTokenDialog";
 import { EditTokenDialog } from "./EditTokenDialog";
 import {
   cmdTotpStartTicker,
@@ -57,7 +54,8 @@ const useStyles = makeStyles({
     display: "grid",
     gridTemplateColumns: "1fr",
     gap: "8px",
-    paddingBottom: "80px",
+    // Extra bottom padding so last card isn't hidden by FAB
+    paddingBottom: "88px",
     "@media (min-width: 640px)": {
       gridTemplateColumns: "repeat(2, 1fr)",
     },
@@ -72,26 +70,12 @@ const useStyles = makeStyles({
     paddingTop: "48px",
     color: tokens.colorNeutralForeground3,
   },
-  fab: {
-    position: "fixed" as const,
-    bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
-    right: "24px",
-    width: "56px",
-    height: "56px",
-    borderRadius: "16px",
-    minWidth: "unset",
-    boxShadow: tokens.shadow16,
-    "@media (max-width: 639px)": {
-      bottom: "calc(76px + env(safe-area-inset-bottom, 0px))",
-    },
-  },
 });
 
 export function TokenListPage() {
   const styles = useStyles();
   const { tokens: tokenList, groups, activeGroup, searchQuery, setActiveGroup, setSearchQuery } =
     useAppStore();
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingToken, setEditingToken] = useState<Token | null>(null);
   const [totpMap, setTotpMap] = useState<Map<string, TotpCode>>(new Map());
   const unlistenRef = useRef<UnlistenFn | null>(null);
@@ -99,7 +83,7 @@ export function TokenListPage() {
   // Start TOTP ticker and listen to events whenever the token list changes
   useEffect(() => {
     if (tokenList.length === 0) {
-      cmdTotpStopTicker().catch(() => {});
+      cmdTotpStopTicker().catch(() => { });
       return;
     }
 
@@ -129,7 +113,7 @@ export function TokenListPage() {
     cmdTotpStartTicker(entries).catch(console.error);
 
     return () => {
-      cmdTotpStopTicker().catch(() => {});
+      cmdTotpStopTicker().catch(() => { });
       if (unlistenRef.current) {
         unlistenRef.current();
         unlistenRef.current = null;
@@ -206,20 +190,6 @@ export function TokenListPage() {
           </motion.div>
         )}
       </motion.div>
-
-      <Tooltip content="Add token" relationship="label">
-        <Button
-          className={styles.fab}
-          appearance="primary"
-          icon={<Add24Regular />}
-          onClick={() => setAddDialogOpen(true)}
-        />
-      </Tooltip>
-
-      <AddTokenDialog
-        open={addDialogOpen}
-        onClose={() => setAddDialogOpen(false)}
-      />
 
       <EditTokenDialog
         token={editingToken}

@@ -14,6 +14,7 @@ import {
   Option,
   Divider,
   Spinner,
+  Input,
 } from "@fluentui/react-components";
 import {
   Person24Regular,
@@ -30,6 +31,8 @@ import {
   WeatherSunny24Regular,
   WeatherMoon24Regular,
   Desktop24Regular,
+  Keyboard24Regular,
+  Save24Regular,
 } from "@fluentui/react-icons";
 import { useAppStore } from "../../store/appStore";
 import type { ThemePreference } from "../../types";
@@ -38,6 +41,7 @@ import {
   cmdGetSessions,
   cmdDeleteSession,
   cmdTotpStopTicker,
+  cmdSetSpotlightShortcut,
   type DeviceSession,
 } from "../../lib/tauri";
 import {
@@ -153,7 +157,13 @@ export function SettingsPage() {
     jwt,
     instanceToken,
     clearSession,
+    spotlightShortcut,
+    setSpotlightShortcut,
   } = useAppStore();
+
+  const [localShortcut, setLocalShortcut] = useState(spotlightShortcut);
+  const [shortcutSaved, setShortcutSaved] = useState(false);
+  const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
 
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -218,6 +228,21 @@ export function SettingsPage() {
     }
   };
 
+  const handleShortcutSave = async () => {
+    try {
+      if (localShortcut.trim() !== "") {
+        await cmdSetSpotlightShortcut(spotlightShortcut, localShortcut.trim());
+        setSpotlightShortcut(localShortcut.trim());
+        setShortcutSaved(true);
+        setTimeout(() => setShortcutSaved(false), 2000);
+      }
+    } catch (e) {
+      console.error("Failed to set shortcut:", e);
+      // Revert if invalid
+      setLocalShortcut(spotlightShortcut);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <Title3>Settings</Title3>
@@ -259,6 +284,73 @@ export function SettingsPage() {
             >
               {logoutBusy ? <Spinner size="tiny" /> : "Sign out"}
             </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Preferences */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>
+          <Keyboard24Regular />
+          <Body2>Preferences</Body2>
+        </div>
+        <Card className={styles.card}>
+          <div className={styles.row}>
+            <div className={styles.rowLeft}>
+              <Keyboard24Regular className={styles.rowIcon} />
+              <div className={styles.rowText}>
+                <Body1 className={styles.rowLabel}>Spotlight shortcut</Body1>
+                <Caption1 className={styles.rowDesc}>
+                  Global shortcut to open 2FA quick search
+                </Caption1>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Input
+                value={isRecordingShortcut ? "Listening..." : localShortcut}
+                onFocus={() => setIsRecordingShortcut(true)}
+                onBlur={() => setIsRecordingShortcut(false)}
+                onKeyDown={(e) => {
+                  if (!isRecordingShortcut) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  // Ignore if they just press modifiers without a normal key
+                  if (["Shift", "Control", "Alt", "Meta", "Escape"].includes(e.key)) {
+                    if (e.key === "Escape") setIsRecordingShortcut(false);
+                    return;
+                  }
+
+                  let keys = [];
+                  if (e.metaKey || e.ctrlKey) keys.push("Ctrl"); // Tauri uses Ctrl for both win/cmd
+                  if (e.altKey) keys.push("Alt");
+                  if (e.shiftKey) keys.push("Shift");
+
+                  // Convert key to uppercase letter or named keys
+                  const rawKey = e.key.toUpperCase();
+                  keys.push(rawKey);
+
+                  const generated = keys.join("+");
+                  setLocalShortcut(generated);
+                  setShortcutSaved(false);
+                  setIsRecordingShortcut(false);
+
+                  // Blurring the input after listening completes
+                  (e.target as HTMLInputElement).blur();
+                }}
+                readOnly // Block normal typing
+                placeholder="Click to set"
+                style={{ width: "140px" }}
+              />
+              <Button
+                appearance="subtle"
+                icon={<Save24Regular />}
+                onClick={handleShortcutSave}
+                disabled={localShortcut === spotlightShortcut || shortcutSaved || isRecordingShortcut}
+              >
+                {shortcutSaved ? "Saved" : "Save"}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>

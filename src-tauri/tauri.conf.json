@@ -10,11 +10,28 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "trayIcon": {
+      "iconPath": "icons/32x32.png",
+      "tooltip": "Phase App"
+    },
     "windows": [
       {
-        "title": "phase-client",
+        "title": "Phase",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "label": "main"
+      },
+      {
+        "label": "spotlight",
+        "title": "Quick Search",
+        "width": 640,
+        "height": 400,
+        "decorations": false,
+        "transparent": true,
+        "visible": false,
+        "alwaysOnTop": true,
+        "center": true,
+        "skipTaskbar": true
       }
     ],
     "security": {

@@ -197,3 +197,9 @@ export const cmdOfflineUnlock = (
   instanceSalt: string
 ): Promise<SessionResult> =>
   invoke<SessionResult>("cmd_offline_unlock", { instanceToken, instanceSalt });
+
+export const cmdSetSpotlightShortcut = (
+  oldShortcut: string | null,
+  newShortcut: string
+): Promise<void> =>
+  invoke<void>("cmd_set_spotlight_shortcut", { oldShortcut, newShortcut });

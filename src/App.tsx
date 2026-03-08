@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -25,8 +26,9 @@ import { AppShell } from "./components/layout/AppShell";
 import { SetupPage } from "./components/auth/SetupPage";
 import { TokenListPage } from "./components/tokens/TokenListPage";
 import { SettingsPage } from "./components/settings/SettingsPage";
+import { SpotlightSearch } from "./components/SpotlightSearch";
 import { useAppStore } from "./store/appStore";
-import { cmdClearSession, cmdRestoreSession } from "./lib/tauri";
+import { cmdClearSession, cmdRestoreSession, cmdSetSpotlightShortcut } from "./lib/tauri";
 import { verifyBiometricUnlock, hasBiometricCredential } from "./lib/biometric";
 import "./App.css";
 
@@ -271,6 +273,14 @@ function App() {
     () => window.matchMedia("(prefers-color-scheme: dark)").matches
   );
 
+  // Initialize spotlight shortcut
+  const spotlightShortcut = useAppStore((s) => s.spotlightShortcut);
+  useEffect(() => {
+    if (getCurrentWindow().label === "main") {
+      cmdSetSpotlightShortcut(null, spotlightShortcut).catch(console.error);
+    }
+  }, [spotlightShortcut]);
+
   // Listen for OS theme changes
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -287,6 +297,10 @@ function App() {
         : isDark;
 
   const theme = resolvedDark ? webDarkTheme : webLightTheme;
+
+  if (getCurrentWindow().label === "spotlight") {
+    return <SpotlightSearch />;
+  }
 
   return (
     <FluentProvider theme={theme} style={{ height: "100dvh" }}>

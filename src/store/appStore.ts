@@ -24,6 +24,7 @@ export const useAppStore = create<AppState>()(persist((set, get) => ({
 
   theme: "system",
   biometricLockEnabled: false,
+  spotlightShortcut: "Ctrl+Shift+L",
 
   tokens: [],
   groups: ["All"],
@@ -35,6 +36,7 @@ export const useAppStore = create<AppState>()(persist((set, get) => ({
   setConnectionMode: (mode) => set({ connectionMode: mode }),
   setTheme: (theme) => set({ theme }),
   setBiometricLockEnabled: (enabled) => set({ biometricLockEnabled: enabled }),
+  setSpotlightShortcut: (shortcut) => set({ spotlightShortcut: shortcut }),
   setActiveGroup: (group) => set({ activeGroup: group }),
   setSearchQuery: (query) => set({ searchQuery: query }),
 
@@ -88,6 +90,7 @@ export const useAppStore = create<AppState>()(persist((set, get) => ({
     connectionMode: state.connectionMode,
     theme: state.theme,
     biometricLockEnabled: state.biometricLockEnabled,
+    spotlightShortcut: state.spotlightShortcut,
     instanceToken: state.instanceToken,
     deviceId: state.deviceId,
   }),
